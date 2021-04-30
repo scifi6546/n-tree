@@ -66,6 +66,20 @@ impl<Data: Clone> L1Node<Data> {
     fn right_empty(&self) -> bool {
         !self.right.is_some()
     }
+    pub fn get_left(&self) -> Option<&Data> {
+        if self.left.is_some() {
+            Some(&self.left.as_ref().unwrap().0)
+        } else {
+            None
+        }
+    }
+    pub fn get_right(&self) -> Option<&Data> {
+        if self.right.is_some() {
+            Some(&self.right.as_ref().unwrap().0)
+        } else {
+            None
+        }
+    }
 }
 type Index = usize;
 /// Top Level Node for Datastructure.
@@ -108,8 +122,7 @@ impl<Data: Clone> L2Node<Data> {
                     self.left.set_left(data[0].clone(), index);
                     self.left.set_right(data[1].clone(), index);
                     self.center_free = self.right.total_free();
-
-                    todo!("set left free and right free, figure out index")
+                    index
                 } else if self.right.left_empty() && self.right.right_empty() {
                     //index is the incremented version of the previous node
                     let index = if let Some(i) = self.left.left_index() {
@@ -123,14 +136,15 @@ impl<Data: Clone> L2Node<Data> {
 
                     self.right.set_left(data[0].clone(), index);
                     self.right.set_right(data[1].clone(), index);
-                    todo!("figure out index");
+                    index
                 } else {
                     panic!("tree is full");
                 }
             } else if data.len() == 1 {
                 if self.left.left_empty() {
-                    self.left.set_left(data[0].clone(), 0);
-                    todo!("figure out index and free");
+                    let index = 0;
+                    self.left.set_left(data[0].clone(), index);
+                    index
                 } else if self.right.left_empty() {
                     //index is the incremented version of the previous node
                     let index = if let Some(i) = self.left.left_index() {
@@ -143,7 +157,7 @@ impl<Data: Clone> L2Node<Data> {
                     };
 
                     self.right.set_left(data[0].clone(), index);
-                    todo!("figure out index and free");
+                    index
                 } else if self.left.right_empty() {
                     let index = if let Some(index) = self.left.left_index() {
                         index + 1
@@ -151,7 +165,7 @@ impl<Data: Clone> L2Node<Data> {
                         panic!("left should have an index")
                     };
                     self.left.set_right(data[0].clone(), index);
-                    todo!("figure out index and free");
+                    index
                 } else if self.right.right_empty() {
                     let index = if let Some(index) = self.right.left_index() {
                         index + 1
@@ -159,9 +173,9 @@ impl<Data: Clone> L2Node<Data> {
                         panic!("left should have a index")
                     };
                     self.right.set_right(data[0].clone(), index);
-                    todo!("figure out index and free");
+                    index
                 } else {
-                    panic!("invalid state");
+                    panic!("Tree full");
                 }
             } else {
                 panic!("violated precondition: data.len()<1")
@@ -171,8 +185,31 @@ impl<Data: Clone> L2Node<Data> {
             todo!("data larger then 4")
         }
     }
-    pub fn get(&self, index: &Index) -> &Data {
-        todo!()
+    pub fn get_checked(&self, index: &Index) -> Option<&Data> {
+        match index {
+            0 => self.left.get_left(),
+            1 => self.left.get_right(),
+            2 => self.right.get_left(),
+            3 => self.right.get_right(),
+            _ => panic!("invalid index"),
+        }
+    }
+    pub fn get(&self, index: &Index) -> Vec<&Data> {
+        let mut start_data = vec![match index {
+            0 => self.left.get_left().unwrap(),
+            1 => self.left.get_right().unwrap(),
+            2 => self.right.get_left().unwrap(),
+            3 => self.right.get_right().unwrap(),
+            _ => panic!("invalid index"),
+        }];
+        for i in index + 1..4 {
+            if let Some(data) = self.get_checked(&i) {
+                start_data.push(data);
+            } else {
+                break;
+            }
+        }
+        start_data
     }
 }
 
@@ -187,7 +224,7 @@ mod tests {
     fn basic_insert() {
         let mut tree: L2Node<u8> = L2Node::new();
         let k = tree.insert(vec![5]);
-        assert_eq!(tree.get(&k), &5);
+        assert_eq!(tree.get(&k), vec![&5]);
     }
     #[test]
     fn mass_insert() {
@@ -195,15 +232,15 @@ mod tests {
         let mut keys = vec![];
         for i in 0..1000 {
             let k = tree.insert(vec![i.clone()]);
-            assert_eq!(tree.get(&k), &i);
+            assert_eq!(tree.get(&k)[0], &i);
             keys.push(k);
         }
         let mut i = 0;
         for k in keys.iter() {
-            assert_eq!(tree.get(k), &i);
+            assert_eq!(tree.get(k), vec![&i]);
             i += 1;
         }
         let k = tree.insert(vec![5]);
-        assert_eq!(tree.get(&k), &5);
+        assert_eq!(tree.get(&k), vec![&5]);
     }
 }
